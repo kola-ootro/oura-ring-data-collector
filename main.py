@@ -3,11 +3,10 @@ import os
 from datetime import datetime, timedelta
 import json
 from flask import Flask, render_template
-from apscheduler.schedulers.background import BackgroundScheduler
 
 OURA_API_KEY = os.environ['OURA_API_KEY']
 BASE_URL = "https://api.ouraring.com/v2/usercollection/"
-DATA_FILE = "oura_data.json"
+DATA_FILE = "/tmp/oura_data.json"  # Use /tmp for Vercel's ephemeral filesystem
 
 app = Flask(__name__, template_folder='templates')
 
@@ -73,10 +72,10 @@ def display_data():
     oura_data = load_data()
     return render_template('template.html', oura_data=oura_data)
 
-if __name__ == "__main__":
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_and_store_data, 'cron', hour='0,12')  # Run at 00:00 and 12:00
-    scheduler.start()
+@app.route('/update', methods=['GET'])
+def manual_update():
+    fetch_and_store_data()
+    return "Data updated successfully", 200
 
-    fetch_and_store_data()  # Fetch data immediately on startup
+if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080)
