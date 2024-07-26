@@ -2,7 +2,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 import json
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for
 import sys
 import logging
 import traceback
@@ -17,11 +17,24 @@ DATA_FILE = "/tmp/oura_data.json"
 
 app = Flask(__name__, template_folder='templates')
 
+def check_api_key():
+    if OURA_API_KEY:
+        logger.info("OURA_API_KEY is set in environment variables.")
+        return True
+    else:
+        logger.error("OURA_API_KEY is not set in environment variables.")
+        return False
+
 @app.route('/')
 def display_data():
     logger.info("Accessing root route")
+    if not check_api_key():
+        return "Error: OURA_API_KEY is not set", 500
     try:
         oura_data = load_data()
+        if not oura_data:
+            logger.info("No data found. Redirecting to fetch initial data.")
+            return redirect(url_for('fetch_initial_data'))
         logger.info(f"Loaded data: {oura_data}")
         return render_template('template.html', oura_data=oura_data)
     except Exception as e:
@@ -32,6 +45,8 @@ def display_data():
 @app.route('/update', methods=['GET'])
 def manual_update():
     logger.info("Accessing update route")
+    if not check_api_key():
+        return "Error: OURA_API_KEY is not set", 500
     try:
         fetch_and_store_data()
         return "Data updated successfully", 200
@@ -39,6 +54,19 @@ def manual_update():
         logger.error(f"Error in manual_update: {str(e)}")
         logger.error(traceback.format_exc())
         return f"An error occurred during update: {str(e)}", 500
+
+@app.route('/fetch_initial_data')
+def fetch_initial_data():
+    logger.info("Fetching initial data")
+    if not check_api_key():
+        return "Error: OURA_API_KEY is not set", 500
+    try:
+        fetch_and_store_data()
+        return redirect(url_for('display_data'))
+    except Exception as e:
+        logger.error(f"Error fetching initial data: {str(e)}")
+        logger.error(traceback.format_exc())
+        return f"An error occurred while fetching initial data: {str(e)}", 500
 
 def fetch_oura_data(data_type, start_date, end_date):
     logger.info(f"Fetching {data_type} data from {start_date} to {end_date}")
@@ -113,4 +141,7 @@ def fetch_and_store_data():
     logger.info("fetch_and_store_data completed successfully")
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080)
+    if check_api_key():
+        app.run(host='0.0.0.0', port=8080)
+    else:
+        print("Please set the OURA_API_KEY environment variable before running the application.")
