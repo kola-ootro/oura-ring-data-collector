@@ -11,6 +11,7 @@ import traceback
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Constants
 OURA_API_KEY = os.environ.get('OURA_API_KEY')
 BASE_URL = "https://api.ouraring.com/v2/usercollection/"
 DATA_FILE = "/tmp/oura_data.json"
@@ -18,6 +19,7 @@ DATA_FILE = "/tmp/oura_data.json"
 app = Flask(__name__, template_folder='templates')
 
 def check_api_key():
+    """Check if the Oura API key is set in environment variables."""
     if OURA_API_KEY:
         logger.info("OURA_API_KEY is set in environment variables.")
         return True
@@ -27,6 +29,7 @@ def check_api_key():
 
 @app.route('/')
 def display_data():
+    """Route to display the Oura Ring data."""
     logger.info("Accessing root route")
     if not check_api_key():
         return "Error: OURA_API_KEY is not set", 500
@@ -44,6 +47,7 @@ def display_data():
 
 @app.route('/update', methods=['GET'])
 def manual_update():
+    """Route to manually trigger data update."""
     logger.info("Accessing update route")
     if not check_api_key():
         return "Error: OURA_API_KEY is not set", 500
@@ -57,6 +61,7 @@ def manual_update():
 
 @app.route('/fetch_initial_data')
 def fetch_initial_data():
+    """Route to fetch initial data if none exists."""
     logger.info("Fetching initial data")
     if not check_api_key():
         return "Error: OURA_API_KEY is not set", 500
@@ -69,6 +74,7 @@ def fetch_initial_data():
         return f"An error occurred while fetching initial data: {str(e)}", 500
 
 def fetch_oura_data(data_type, start_date, end_date):
+    """Fetch data from Oura API for a specific type and date range."""
     logger.info(f"Fetching {data_type} data from {start_date} to {end_date}")
     if not OURA_API_KEY:
         logger.error("OURA_API_KEY is not set in environment variables")
@@ -88,6 +94,7 @@ def fetch_oura_data(data_type, start_date, end_date):
         raise
 
 def store_data(data):
+    """Store the fetched data to a file."""
     logger.info(f"Storing data to {DATA_FILE}")
     try:
         with open(DATA_FILE, 'w') as f:
@@ -98,6 +105,7 @@ def store_data(data):
         raise
 
 def load_data():
+    """Load data from the storage file."""
     logger.info(f"Loading data from {DATA_FILE}")
     try:
         with open(DATA_FILE, 'r') as f:
@@ -111,6 +119,7 @@ def load_data():
         raise
 
 def update_data(new_data):
+    """Update the stored data with new data."""
     logger.info("Updating data")
     existing_data = load_data()
     for data_type, data in new_data.items():
@@ -121,6 +130,7 @@ def update_data(new_data):
     store_data(existing_data)
 
 def fetch_and_store_data():
+    """Fetch new data from Oura API and store it."""
     logger.info("Starting fetch_and_store_data")
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=7)
