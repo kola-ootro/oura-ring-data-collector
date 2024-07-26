@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 OURA_API_KEY = os.environ.get('OURA_API_KEY')
 BASE_URL = "https://api.ouraring.com/v2/usercollection/"
 DATA_FILE = "/tmp/oura_data.json"
+LAST_UPDATED_FILE = "/tmp/last_updated.txt"
 
 app = Flask(__name__, template_folder='templates')
 
@@ -38,8 +39,9 @@ def display_data():
         if not oura_data:
             logger.info("No data found. Redirecting to fetch initial data.")
             return redirect(url_for('fetch_initial_data'))
+        last_updated = load_last_updated_time()
         logger.info(f"Loaded data: {oura_data}")
-        return render_template('template.html', oura_data=oura_data)
+        return render_template('template.html', oura_data=oura_data, last_updated=last_updated)
     except Exception as e:
         logger.error(f"Error in display_data: {str(e)}")
         logger.error(traceback.format_exc())
@@ -53,7 +55,7 @@ def manual_update():
         return "Error: OURA_API_KEY is not set", 500
     try:
         fetch_and_store_data()
-        return "Data updated successfully", 200
+        return redirect(url_for('display_data'))
     except Exception as e:
         logger.error(f"Error in manual_update: {str(e)}")
         logger.error(traceback.format_exc())
@@ -148,7 +150,22 @@ def fetch_and_store_data():
             logger.error(traceback.format_exc())
 
     update_data(new_data)
+    store_last_updated_time()
     logger.info("fetch_and_store_data completed successfully")
+
+def store_last_updated_time():
+    """Store the last updated time."""
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(LAST_UPDATED_FILE, 'w') as f:
+        f.write(last_updated)
+
+def load_last_updated_time():
+    """Load the last updated time."""
+    try:
+        with open(LAST_UPDATED_FILE, 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "Never"
 
 if __name__ == "__main__":
     if check_api_key():
