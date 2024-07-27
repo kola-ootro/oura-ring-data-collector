@@ -13,6 +13,8 @@
             --surface: #FEF7FF;
             --on-surface: #1D1B20;
             --outline: #79747E;
+            --success-color: #4CAF50;
+            --success-hover: #45a049;
         }
 
         body {
@@ -40,14 +42,31 @@
             margin-bottom: 24px;
         }
 
-        .update-button {
-            background-color: var(--primary-color);
-            color: var(--on-primary);
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .update-button, .download-button {
             border: none;
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            color: var(--on-primary);
+        }
+
+        .update-button {
+            background-color: var(--primary-color);
+        }
+
+        .download-button {
+            background-color: var(--success-color);
+        }
+
+        .download-button:hover {
+            background-color: var(--success-hover);
         }
 
         .tabs {
@@ -106,6 +125,14 @@
             th, td {
                 padding: 8px;
             }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .update-button, .download-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -114,9 +141,14 @@
         <h1>OURA Ring Data</h1>
         <div class="update-info">
             <p>Last updated: {{ last_updated }}</p>
-            <form action="{{ url_for('manual_update') }}" method="get">
-                <button type="submit" class="update-button">Update Data Now</button>
-            </form>
+            <div class="button-container">
+                <form action="{{ url_for('manual_update') }}" method="get">
+                    <button type="submit" class="update-button">Update Data Now</button>
+                </form>
+                <form action="{{ url_for('download_archive') }}" method="get">
+                    <button type="submit" class="download-button">Download Archive</button>
+                </form>
+            </div>
         </div>
 
         <div class="tabs">

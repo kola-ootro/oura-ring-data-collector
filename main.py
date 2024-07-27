@@ -2,10 +2,12 @@ import requests
 import os
 from datetime import datetime, timedelta
 import json
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, send_file
 import sys
 import logging
 import traceback
+import pandas as pd
+import io
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -74,6 +76,35 @@ def fetch_initial_data():
         logger.error(f"Error fetching initial data: {str(e)}")
         logger.error(traceback.format_exc())
         return f"An error occurred while fetching initial data: {str(e)}", 500
+
+@app.route('/download_archive')
+def download_archive():
+    """Route to download all data as an Excel file."""
+    logger.info("Accessing download archive route")
+    if not check_api_key():
+        return "Error: OURA_API_KEY is not set", 500
+    try:
+        oura_data = load_data()
+        if not oura_data:
+            logger.info("No data found for download.")
+            return "No data available for download", 404
+
+        # Create a Pandas Excel writer using XlsxWriter as the engine
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for data_type, data in oura_data.items():
+                df = pd.DataFrame(data['data'])
+                df.to_excel(writer, sheet_name=data_type, index=False)
+
+        output.seek(0)
+        return send_file(output, 
+                         download_name='oura_data_archive.xlsx', 
+                         as_attachment=True, 
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    except Exception as e:
+        logger.error(f"Error in download_archive: {str(e)}")
+        logger.error(traceback.format_exc())
+        return f"An error occurred during archive download: {str(e)}", 500
 
 def fetch_oura_data(data_type, start_date, end_date):
     """Fetch data from Oura API for a specific type and date range."""
